@@ -1,3 +1,5 @@
+![Screenshot](docs/intro_img.png)
+
 # AI Notes Assistant — XAA Demo (Go)
 
 A Go web app (chi + `coreos/go-oidc`/`golang.org/x/oauth2` + `crewjam/saml`) demonstrating **Cross-App Access (XAA)** using the [official MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk). It acts as a requester app that fetches a user's notes from a protected MCP Server, with no OAuth consent screens. 
