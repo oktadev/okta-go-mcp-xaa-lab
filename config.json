@@ -1,26 +1,26 @@
 {
   "xaa": {
-    "clientId":        "client_da610b14c5a7c9f3",
-    "clientSecret":    "secret_35GUe6OcRP9bgizfrTbm_1hqgOCgdXJd",
+    "clientId":        "<your-client-id>",
+    "clientSecret":    "<your-client-secret>",
     "idpBaseUrl":      "https://idp.xaa.dev",
 
-    "mcpClientId":     "client_da610b14c5a7c9f3-at-todo0-mcp",
-    "mcpClientSecret": "secret_XnfjRfheWBBLpt8Ws02YTLA_R3cyKQLR",
+    "mcpClientId":     "<your-mcp-client-id>",
+    "mcpClientSecret": "<your-mcp-client-secret>",
 
     "authServerUrl":   "https://auth.resource.xaa.dev",
     "mcpServerUrl":    "https://mcp.xaa.dev/mcp",
     "resourceUri":     "todo0://todos",
     "scope":           "todos.read mcp.access",
 
-    "redirectUri":     "http://localhost:3001/callback",
-    "sessionSecret":   "W8puVUiAK6x/EHvkQ4ur3iVLU7429ynblhHelhVI524="
+    "redirectUri":     "http://localhost:8080/callback",
+    "sessionSecret":   "<any-long-random-string>"
   },
   "saml": {
     "enabled":        false,
     "idpMetadataUrl": "<your-saml-idp-metadata-url>",
     "spCertFile":     "saml-sp.cert",
     "spKeyFile":       "saml-sp.key",
-    "spRootUrl":      "http://localhost:3001"
+    "spRootUrl":      "http://localhost:8080"
   },
-  "port": 3001
+  "port": 8080
 }
