@@ -1,0 +1,15 @@
+# For production apps, move secrets out of config.json into:
+# config.local.json or environment variables (not committed)
+config.local.json
+
+# SAML SP key material — never commit
+saml-sp.key
+saml-sp.cert
+
+# Go build output
+oktane-go-mcp-xaa
+/bin/
+
+# IDE
+.vscode/
+.idea/

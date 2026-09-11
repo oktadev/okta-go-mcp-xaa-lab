@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Notes Assistant - Go</title>
+  <style>
+    :root{
+      --bg:#efe8d8; --surface:#fffdf8; --surface-2:#f2ecdd; --border:rgba(20,15,5,.08);
+      --text:#171310; --text-dim:#6e665a; --text-faint:#a39a89;
+      --accent:#f4c430; --accent-ink:#4a3c05; --accent-solid:#171310; --accent-solid-hover:#332c22;
+      --ok:#3f8b5c; --err:#c0503f;
+      --p-green:#c3e0b6; --p-pink:#f4cadd; --p-blue:#bfe0ef; --p-peach:#f6d6ab;
+      --r-lg:20px; --r-md:14px; --r-sm:10px; --r-pill:999px;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center}
+    button,a{transition:transform .15s ease,background .15s ease,border-color .15s ease,opacity .15s ease}
+    button:active,a:active{transform:scale(.97)}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+    /* ── LOGIN ─────────────────────────────────────────────────────────── */
+    #login-view{width:100%;min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:2rem;position:relative;overflow:hidden}
+
+    .sticker{position:absolute;width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;box-shadow:0 8px 20px rgba(20,15,5,.12);animation:floatY 4s ease-in-out infinite}
+    .sticker-pin{top:22%;left:28%;background:var(--p-green);animation-delay:0s}
+    .sticker-pencil{top:16%;right:26%;background:var(--p-pink);animation-delay:.6s}
+    .sticker-check{bottom:24%;left:31%;background:var(--p-blue);color:var(--text);animation-delay:1.2s}
+    .sticker-star{bottom:18%;right:29%;background:var(--p-peach);color:var(--text);animation-delay:1.8s}
+    @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+
+    .login-hero{text-align:center;max-width:460px;padding:0 1rem;position:relative;z-index:1;animation:fadeUp .5s ease both}
+    .login-title{font-size:2.4rem;font-weight:800;color:var(--text);margin-bottom:1rem;letter-spacing:-0.8px;line-height:1.2}
+    .login-hl{background:var(--accent);color:var(--accent-ink);padding:0 .3rem;border-radius:6px}
+    .login-sub{font-size:.95rem;color:var(--text-dim);margin-bottom:1.5rem;line-height:1.6}
+    .sso-btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent-solid);color:#fff;padding:.85rem 2.4rem;border-radius:var(--r-pill);font-size:.9rem;font-weight:700;cursor:pointer;text-decoration:none}
+    .sso-btn:hover{background:var(--accent-solid-hover);transform:translateY(-1px)}
+    .sso-alt{display:block;margin-top:1rem;font-size:.8rem;color:var(--text-dim);text-decoration:underline;cursor:pointer}
+    .sso-alt:hover{color:var(--text)}
+
+    .features{display:none}
+
+    /* ── APP SHELL ──────────────────────────────────────────────────────── */
+    #app-view{display:none;width:100%;max-width:960px;min-height:100vh;flex-direction:column}
+    #app-view.on{display:flex}
+
+    .topbar{background:var(--bg);border-bottom:1px solid var(--border);padding:.8rem 1.25rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+    .brand{font-size:.85rem;font-weight:800;color:var(--text);display:flex;align-items:center;gap:7px}
+    .brand .mark{opacity:.85}
+    .user-row{display:flex;align-items:center;gap:.6rem;font-size:.78rem;color:var(--text-dim)}
+    .av{width:26px;height:26px;border-radius:9px;background:var(--p-peach);color:var(--text);font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center}
+    .so-btn{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:.72rem;padding:3px 8px;border-radius:var(--r-pill)}
+    .so-btn:hover{color:var(--err)}
+
+    /* ── TWO-COLUMN LAYOUT ─────────────────────────────────────────────── */
+    .workspace{display:grid;grid-template-columns:230px 1fr;flex:1;gap:0}
+
+    /* Sidebar */
+    .sidebar{background:var(--bg);border-right:1px solid var(--border);padding:1rem .9rem;display:flex;flex-direction:column;gap:.7rem}
+    .btn-analyze{width:100%;padding:.65rem;background:var(--accent-solid);color:#fff;border:none;border-radius:var(--r-pill);font-size:.8rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
+    .btn-analyze:hover:not(:disabled){background:var(--accent-solid-hover)}
+    .btn-analyze:disabled{background:var(--surface-2);color:var(--text-faint);cursor:not-allowed}
+
+    .sb-label{font-size:.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-faint);font-weight:700;margin:.3rem 0 .2rem;padding-left:.1rem}
+    .step{display:flex;gap:7px;align-items:flex-start;padding:.35rem .3rem;border-radius:var(--r-sm);animation:fadeUp .35s ease both}
+    .si{width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;margin-top:1px}
+    .s-run{background:var(--surface);border:1.5px solid var(--accent-solid);animation:pulse .9s infinite}
+    .s-ok{background:var(--surface);border:1.5px solid var(--ok);color:var(--ok);font-size:9px}
+    .s-err{background:var(--surface);border:1.5px solid var(--err);color:var(--err);font-size:9px}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .sp{width:8px;height:8px;border:1.5px solid var(--surface);border-top-color:var(--accent-solid);border-radius:50%;animation:spin .5s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .step-label{font-size:.72rem;color:var(--text-dim);font-weight:600;line-height:1.3}
+    .step-label.ok{color:var(--text)}.step-label.err{color:var(--err)}
+    .step-detail{font-size:.63rem;color:var(--text-faint);margin-top:1px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .step-time{font-size:.6rem;color:var(--text-faint);margin-top:1px}
+
+    .token-box{background:var(--surface);border-radius:var(--r-md);padding:.5rem .65rem;margin-top:.3rem;animation:fadeUp .35s ease both;box-shadow:0 1px 2px rgba(20,15,5,.05)}
+    .token-lbl{font-size:.58rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-faint);margin-bottom:2px;font-weight:700}
+    .token-val{font-size:.6rem;color:var(--text-dim);font-family:ui-monospace,monospace;word-break:break-all;line-height:1.4}
+
+    /* Main area */
+    .main{background:var(--bg);overflow-y:auto;display:flex;flex-direction:column}
+
+    .section{padding:1.1rem 1.25rem}
+    .sec-title{font-size:.8rem;font-weight:800;color:var(--text);margin-bottom:.7rem;display:flex;align-items:center;gap:6px}
+    .count-chip{background:var(--surface);color:var(--text-dim);font-size:.65rem;padding:2px 9px;border-radius:var(--r-pill);font-weight:700}
+
+    /* Analysis */
+    .ai-summary{font-size:.82rem;color:var(--text-dim);line-height:1.6;background:var(--surface);border-radius:var(--r-lg);padding:.85rem 1rem;margin-bottom:.7rem;box-shadow:0 1px 2px rgba(20,15,5,.05)}
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.55rem;margin-bottom:.7rem}
+    .stat{background:var(--surface);border-radius:var(--r-md);padding:.65rem;text-align:center;animation:fadeUp .35s ease both;box-shadow:0 1px 2px rgba(20,15,5,.05)}
+    .stat-v{font-size:1.3rem;font-weight:800;color:var(--text)}
+    .stat-l{font-size:.6rem;color:var(--text-faint);text-transform:uppercase;margin-top:1px}
+    .c-ind{background:var(--accent);color:var(--accent-ink);border-radius:6px;padding:0 .35rem}
+    .c-grn,.c-red,.c-amb{color:var(--text)}
+
+    .focus-list{display:flex;flex-direction:column;gap:.4rem}
+    .focus-item{display:flex;align-items:flex-start;gap:.55rem;font-size:.78rem;color:var(--text-dim);padding:.5rem .7rem;background:var(--surface);border-radius:var(--r-md);animation:fadeUp .35s ease both;box-shadow:0 1px 2px rgba(20,15,5,.05)}
+    .focus-n{font-size:.65rem;font-weight:800;color:var(--text);flex-shrink:0;margin-top:1px}
+    .insights-list{display:flex;flex-direction:column;gap:.3rem;margin-top:.7rem}
+    .ins-row{display:flex;align-items:flex-start;gap:.5rem;font-size:.78rem;color:var(--text-dim);padding:.4rem 0;border-bottom:1px solid var(--border)}
+    .ins-row:last-child{border-bottom:none}
+    .ins-row span:first-child{opacity:.7;font-size:.85em}
+
+    /* Notes */
+    .note-item{display:flex;align-items:flex-start;gap:.6rem;padding:.65rem .8rem;border-radius:var(--r-md);background:var(--surface);margin-bottom:.4rem;animation:fadeUp .35s ease both;box-shadow:0 1px 2px rgba(20,15,5,.05);transition:transform .15s ease,box-shadow .15s ease}
+    .note-item:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(20,15,5,.08)}
+    .nbar{display:none}
+    .n-body{flex:1;min-width:0}
+    .n-title{font-size:.82rem;font-weight:700;color:var(--text);line-height:1.35}
+    .n-content{font-size:.72rem;color:var(--text-faint);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .n-chips{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.35rem}
+    .chip{font-size:.6rem;padding:2px 9px;border-radius:var(--r-pill);background:var(--surface-2);color:var(--text-dim);font-weight:600}
+    .chip-recent{background:var(--accent);color:var(--accent-ink);font-weight:700}
+    .chip-updated{color:var(--text-faint)}
+
+    .placeholder{text-align:center;padding:2rem 1rem;color:var(--text-faint);font-size:.82rem}
+    .placeholder strong{display:block;color:var(--text-dim);margin-bottom:.3rem;font-size:.88rem}
+
+    .raw-section{background:var(--surface);border-radius:var(--r-md);padding:.55rem .7rem;font-size:.65rem;font-family:ui-monospace,monospace;color:var(--text-dim);white-space:pre-wrap;word-break:break-all;max-height:80px;overflow-y:auto;margin-top:.5rem}
+  </style>
+</head>
+<body>
+
+<!-- ── LOGIN ──────────────────────────────────────────────────────────────── -->
+<div id="login-view">
+  <div class="sticker sticker-pin">📌</div>
+  <div class="sticker sticker-pencil">✏️</div>
+  <div class="sticker sticker-check">✓</div>
+  <div class="sticker sticker-star">★</div>
+  <div class="login-hero">
+    <h1 class="login-title">Your <span class="login-hl">notes</span>,<br>secured automatically.</h1>
+    <p class="login-sub">Create, edit, and revisit your notes. Signed in through enterprise<br>Cross-App Access — no consent screens, no manual setup.</p>
+    <a class="sso-btn" href="/login">Sign in</a>
+    <a class="sso-alt" href="/login/saml">or continue with SAML SSO</a>
+  </div>
+</div>
+
+<!-- ── APP ────────────────────────────────────────────────────────────────── -->
+<div id="app-view">
+
+  <div class="topbar">
+    <div class="brand"><span class="mark">🗒️</span> AI Notes Assistant</div>
+    <div id="user-area" style="display:none" class="user-row">
+      <div class="av" id="avatar">U</div>
+      <span id="user-email"></span>
+      <button class="so-btn" onclick="window.location.href='/logout'">Sign out</button>
+    </div>
+  </div>
+
+  <div class="workspace">
+
+    <!-- Sidebar: XAA Auth Flow -->
+    <div class="sidebar">
+      <button class="btn-analyze" id="analyzeBtn" onclick="runFlow()">▶ Analyze My Notes</button>
+      <div class="sb-label">XAA Auth Flow</div>
+      <div id="step-list">
+        <div class="step"><div class="step-detail" style="color:var(--text-faint)">Click to start</div></div>
+      </div>
+      <div id="token-area"></div>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+
+      <!-- Analysis -->
+      <div class="section" id="analysis-section">
+        <div class="placeholder" id="analysis-ph"><strong>AI Analysis</strong>Click "Analyze My Notes" to run the XAA flow and get insights.</div>
+
+        <div id="analysis-content" style="display:none">
+          <div class="ai-summary" id="ai-summary"></div>
+          <div class="stats-row">
+            <div class="stat"><div class="stat-v c-ind" id="s-total">—</div><div class="stat-l">Total</div></div>
+            <div class="stat"><div class="stat-v c-grn" id="s-recent">—</div><div class="stat-l">Updated (7d)</div></div>
+            <div class="stat"><div class="stat-v c-amb" id="s-tags">—</div><div class="stat-l">Tags</div></div>
+            <div class="stat"><div class="stat-v c-red" id="s-words">—</div><div class="stat-l">Words</div></div>
+          </div>
+          <div class="sec-title" style="font-size:.72rem;margin-bottom:.4rem">Recently Updated</div>
+          <div class="focus-list" id="focus-list"></div>
+          <div class="insights-list" id="insights-list"></div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="section">
+        <div class="sec-title">
+          Notes
+          <span class="count-chip" id="note-count"></span>
+        </div>
+        <div id="note-list">
+          <div class="placeholder"><strong>No notes loaded</strong>Notes from the xaa.dev MCP Server appear here.</div>
+        </div>
+        <div id="raw-area"></div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /workspace -->
+</div><!-- /app -->
+
+<script>
+// ── Init ────────────────────────────────────────────────────────────────────
+async function init() {
+  const { loggedIn, email } = await fetch('/api/user').then(r => r.json());
+  if (loggedIn) {
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('app-view').className = 'on';
+    document.getElementById('user-area').style.display = 'flex';
+    document.getElementById('user-email').textContent = email;
+    document.getElementById('avatar').textContent = email[0].toUpperCase();
+    if (new URLSearchParams(location.search).get('autorun') === 'true') {
+      history.replaceState({}, '', '/'); runFlow();
+    }
+  }
+}
+init();
+
+// ── Journey helpers ──────────────────────────────────────────────────────────
+let activeEl = null;
+function clearSteps() { document.getElementById('step-list').innerHTML=''; document.getElementById('token-area').innerHTML=''; activeEl=null; }
+function addStep(label) {
+  const d=document.createElement('div'); d.className='step';
+  d.innerHTML='<div class="si s-run"><div class="sp"></div></div><div><div class="step-label">'+label+'</div><div class="step-detail"></div><div class="step-time"></div></div>';
+  document.getElementById('step-list').appendChild(d); d.scrollIntoView({block:'nearest'}); activeEl=d;
+}
+function setDetail(t){if(activeEl) activeEl.querySelector('.step-detail').textContent=t;}
+function completeStep(msg,time){
+  if(!activeEl)return;
+  activeEl.querySelector('.si').className='si s-ok'; activeEl.querySelector('.si').textContent='✓';
+  activeEl.querySelector('.step-label').className='step-label ok';
+  if(msg) activeEl.querySelector('.step-detail').textContent=msg;
+  if(time) activeEl.querySelector('.step-time').textContent=time+'ms';
+  activeEl=null;
+}
+function failStep(msg){
+  if(!activeEl)return;
+  activeEl.querySelector('.si').className='si s-err'; activeEl.querySelector('.si').textContent='✕';
+  activeEl.querySelector('.step-label').className='step-label err';
+  activeEl.querySelector('.step-label').textContent=msg; activeEl=null;
+}
+
+// ── Run flow ─────────────────────────────────────────────────────────────────
+function runFlow() {
+  const btn=document.getElementById('analyzeBtn');
+  btn.disabled=true; btn.textContent='⏳ Analyzing…';
+  clearSteps();
+  document.getElementById('analysis-ph').style.display='block';
+  document.getElementById('analysis-content').style.display='none';
+  document.getElementById('raw-area').innerHTML='';
+
+  const es=new EventSource('/api/flow');
+  es.addEventListener('step',    e=>addStep(e.data));
+  es.addEventListener('detail',  e=>setDetail(e.data));
+  es.addEventListener('success', e=>{ const [m,t]=e.data.split('|'); completeStep(m,t); });
+  es.addEventListener('error',   e=>failStep(e.data));
+  es.addEventListener('token', e=>{
+    document.getElementById('token-area').innerHTML=
+      '<div class="token-box"><div class="token-lbl">Access Token</div><div class="token-val">'+e.data+'…</div></div>';
+  });
+  es.addEventListener('claims', e=>{
+    const c=JSON.parse(e.data);
+    const row=(label,val)=>'<div style="display:flex;justify-content:space-between;gap:.5rem;margin-top:3px"><span style="color:var(--text-faint);font-size:.58rem;flex-shrink:0">'+label+'</span><span style="color:var(--accent);font-size:.6rem;text-align:right;word-break:break-all">'+val+'</span></div>';
+    const prev=document.getElementById('token-area').innerHTML;
+    document.getElementById('token-area').innerHTML=prev+
+      '<div class="token-box" style="margin-top:.35rem">'+
+        '<div class="token-lbl">Token Claims (proof from xaa.dev)</div>'+
+        row('iss',c.iss||'—')+
+        row('aud',c.aud||'—')+
+        row('sub',c.sub||'—')+
+      '</div>';
+  });
+  es.addEventListener('data', e=>{
+    const d=JSON.parse(e.data);
+    renderAnalysis(d.insights||{}, d.notes||[]);
+    renderNotes(d.notes||[], d.resources||[], d.rawContent||'');
+  });
+  es.addEventListener('done', ()=>{ es.close(); btn.disabled=false; btn.textContent='↺ Re-analyze'; });
+  es.onerror=()=>{ es.close(); btn.disabled=false; btn.textContent='▶ Analyze My Notes'; };
+}
+
+// ── Render analysis ──────────────────────────────────────────────────────────
+function renderAnalysis(ins, notes) {
+  document.getElementById('analysis-ph').style.display='none';
+  document.getElementById('analysis-content').style.display='block';
+  document.getElementById('s-total').textContent=ins.totalCount||notes.length;
+  document.getElementById('s-recent').textContent=ins.recentCount||0;
+  document.getElementById('s-tags').textContent=ins.tagCount||0;
+  document.getElementById('s-words').textContent=ins.wordCount||0;
+  document.getElementById('ai-summary').textContent=ins.summary||'';
+  const fl=document.getElementById('focus-list');
+  fl.innerHTML=(ins.recentNotes||[]).map((t,i)=>'<div class="focus-item"><span class="focus-n">'+(i+1)+'</span>'+t+'</div>').join('');
+  const il=document.getElementById('insights-list');
+  il.innerHTML=(ins.items||[]).map(i=>'<div class="ins-row"><span style="flex-shrink:0">'+i.icon+'</span><span>'+i.text+'</span></div>').join('');
+}
+
+// ── Render notes ──────────────────────────────────────────────────────────────
+function renderNotes(notes, resources, raw) {
+  const cnt=notes.length;
+  document.getElementById('note-count').textContent=cnt+(cnt===1?' note':' notes');
+  if(!cnt){
+    document.getElementById('note-list').innerHTML='<div class="placeholder"><strong>No notes</strong>The MCP server returned no notes.</div>';
+    if(raw) document.getElementById('raw-area').innerHTML='<div class="raw-section">'+raw+'</div>';
+    return;
+  }
+  const now=new Date();
+  notes.sort((a,b)=>new Date(b.updatedAt||b.createdAt||0)-new Date(a.updatedAt||a.createdAt||0));
+  const html=notes.map(function(n){
+    const updated=n.updatedAt?new Date(n.updatedAt):(n.createdAt?new Date(n.createdAt):null);
+    const days=updated?Math.floor((now-updated)/86400000):null;
+    const isRecent=days!==null&&days<=7;
+    const cls='note-item'+(isRecent?' recent':'');
+    let chips=(n.tags||[]).map(function(tg){return'<span class="chip">#'+tg+'</span>';}).join('');
+    if(isRecent) chips+='<span class="chip chip-recent">Updated recently</span>';
+    else if(updated) chips+='<span class="chip chip-updated">'+updated.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</span>';
+    return '<div class="'+cls+'">'
+      +'<div class="nbar"></div>'
+      +'<div class="n-body">'
+        +'<div class="n-title">'+(n.title||'')+'</div>'
+        +(n.content?'<div class="n-content">'+n.content+'</div>':'')
+        +(chips?'<div class="n-chips">'+chips+'</div>':'')
+      +'</div></div>';
+  }).join('');
+  document.getElementById('note-list').innerHTML=html;
+}
+</script>
+</body>
+</html>
