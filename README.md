@@ -31,7 +31,7 @@ Step 4  MCP Server call via Streamable HTTP transport
 
 ## Setup
 
-Requires **Go 1.25+**.
+Requires **Go 1.26 or newer+**.
 
 ```bash
 go mod tidy
